@@ -1,0 +1,19 @@
+{
+  "name": "chat-client-workspace",
+  "private": true,
+  "packageManager": "pnpm@10.33.4",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "wait": "pnpm --filter tools wait",
+    "seed": "pnpm --filter tools seed",
+    "chaos": "pnpm --filter tools chaos",
+    "check": "pnpm --filter tools check"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

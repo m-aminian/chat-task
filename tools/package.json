@@ -1,0 +1,19 @@
+{
+  "name": "tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "wait": "tsx wait-for-synapse.ts",
+    "seed": "tsx seed.ts",
+    "chaos": "tsx chaos-bot.ts",
+    "check": "tsx checker.ts",
+    "typecheck": "tsc --noEmit",
+    "measure": "tsx measure.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "playwright": "^1.64.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

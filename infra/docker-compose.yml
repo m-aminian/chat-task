@@ -1,0 +1,25 @@
+name: chat-assignment
+
+services:
+  synapse:
+    image: docker.io/matrixdotorg/synapse:v1.162.0
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        python -m synapse.app.homeserver --config-path /config/homeserver.yaml --generate-missing-configs --keys-directory /data &&
+        exec python -m synapse.app.homeserver --config-path /config/homeserver.yaml
+    ports:
+      - "8008:8008"
+    volumes:
+      - ./synapse:/config:ro
+      - synapse-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8008/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 60
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  synapse-data:
