@@ -5,6 +5,7 @@ const TICK_MS = 30_000;
 
 function createClock() {
   let now = Date.now();
+  let timer: ReturnType<typeof setInterval> | null = null;
   const listeners = new Set<() => void>();
 
   const tick = () => {
@@ -17,10 +18,13 @@ function createClock() {
     subscribe(listener: () => void) {
       listeners.add(listener);
       now = Date.now();
-      const timer = setInterval(tick, TICK_MS);
+      if (timer === null) timer = setInterval(tick, TICK_MS);
       return () => {
         listeners.delete(listener);
-        if (listeners.size === 0) clearInterval(timer);
+        if (listeners.size === 0 && timer !== null) {
+          clearInterval(timer);
+          timer = null;
+        }
       };
     },
   };
