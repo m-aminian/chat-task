@@ -142,7 +142,11 @@ export function mergeEvents(
     if (event.kind === "redacted" && event.type !== "m.room.message") continue;
     if (draft.item(event.eventId) || added.includes(event.eventId)) continue;
 
-    const echoId = draft.next.pending.find((id) => draft.item(id)?.local?.eventId === event.eventId) ?? null;
+    const echoId =
+      draft.next.pending.find((id) => {
+        const local = draft.item(id)?.local;
+        return local !== undefined && (local.txnId === event.txnId || local.eventId === event.eventId);
+      }) ?? null;
     const echo = echoId ? draft.item(echoId) : undefined;
     if (echoId && echo) {
       draft.deleteItem(echoId);

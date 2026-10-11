@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { EventId, RoomId, TxnId, UserId } from "./ids";
-import { eventIdSchema, newTxnId, userIdSchema } from "./ids";
+import { eventIdSchema, userIdSchema } from "./ids";
 
 export class MatrixApiError extends Error {
   constructor(
@@ -227,10 +227,10 @@ export class MatrixApi {
     });
   }
 
-  async send(roomId: RoomId, type: string, content: object, signal?: AbortSignal): Promise<EventId> {
+  async send(roomId: RoomId, type: string, content: object, txnId: TxnId, signal?: AbortSignal): Promise<EventId> {
     const res = await this.call(
       "PUT",
-      `/_matrix/client/v3/rooms/${enc(roomId)}/send/${enc(type)}/${enc(newTxnId())}`,
+      `/_matrix/client/v3/rooms/${enc(roomId)}/send/${enc(type)}/${enc(txnId)}`,
       {
         body: content,
         signal,

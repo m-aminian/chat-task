@@ -117,6 +117,7 @@ export class SendQueue {
         entry.roomId,
         "m.room.message",
         entry.content,
+        entry.txnId,
         AbortSignal.timeout(SEND_TIMEOUT_MS),
       );
       this.entries.delete(entry.txnId);
@@ -136,18 +137,26 @@ export class SendQueue {
   }
 
   async edit(roomId: RoomId, targetId: EventId, body: string): Promise<void> {
-    await this.api.send(roomId, "m.room.message", {
-      msgtype: "m.text",
-      body: `* ${body}`,
-      "m.new_content": { msgtype: "m.text", body },
-      "m.relates_to": { rel_type: "m.replace", event_id: targetId },
-    });
+    await this.api.send(
+      roomId,
+      "m.room.message",
+      {
+        msgtype: "m.text",
+        body: `* ${body}`,
+        "m.new_content": { msgtype: "m.text", body },
+        "m.relates_to": { rel_type: "m.replace", event_id: targetId },
+      },
+      newTxnId(),
+    );
   }
 
   async react(roomId: RoomId, targetId: EventId, key: string): Promise<void> {
-    await this.api.send(roomId, "m.reaction", {
-      "m.relates_to": { rel_type: "m.annotation", event_id: targetId, key },
-    });
+    await this.api.send(
+      roomId,
+      "m.reaction",
+      { "m.relates_to": { rel_type: "m.annotation", event_id: targetId, key } },
+      newTxnId(),
+    );
   }
 
   async redact(roomId: RoomId, eventId: EventId): Promise<void> {
