@@ -2,7 +2,7 @@ import { z } from "zod";
 import { MatrixApiError, type JoinedRoomSync, type MatrixApi, type SyncResponse } from "../matrix/api";
 import { isRelation, parseEvent, type MatrixEvent, type MessageEvent } from "../matrix/events";
 import { isRoomId, userIdSchema, type RoomId, type UserId } from "../matrix/ids";
-import { applyRoomUpdate, type GapFill } from "../store/reducers";
+import { applyRoomUpdate, type GapFill, type RoomUpdate } from "../store/reducers";
 import type { AppState, SyncStatus } from "../store/state";
 import type { Store } from "../store/store";
 import type { RoomTimeline } from "../timeline/merge";
@@ -152,6 +152,8 @@ export class SyncEngine {
 
   private async process(response: SyncResponse, signal: AbortSignal): Promise<void> {
     const initial = this.since === null;
+    const updates: RoomUpdate[] = [];
+
     for (const [id, room] of Object.entries(response.rooms.join)) {
       if (!isRoomId(id)) continue;
       const roomId = id;
@@ -164,24 +166,32 @@ export class SyncEngine {
         gap = await this.fillGap(roomId, existing, prevBatch, signal);
       }
 
-      this.store.setState((s) =>
-        applyRoomUpdate(s, {
-          roomId,
-          stateEvents: room.state.events,
-          timeline,
-          prevBatch,
-          gap,
-          unread: {
-            notifications: room.unread_notifications.notification_count,
-            highlights: room.unread_notifications.highlight_count,
-          },
-          typing: readTyping(room),
-        }),
-      );
+      updates.push({
+        roomId,
+        stateEvents: room.state.events,
+        timeline,
+        prevBatch,
+        gap,
+        unread: {
+          notifications: room.unread_notifications.notification_count,
+          highlights: room.unread_notifications.highlight_count,
+        },
+        typing: readTyping(room),
+      });
+    }
 
-      if (!initial) {
-        const messages = timeline.filter((e): e is MessageEvent => !isRelation(e));
-        if (messages.length > 0) for (const listener of [...this.listeners]) listener(roomId, messages);
+    // One store update for the whole batch, not one per room: every
+    // subscriber is notified once per sync cycle instead of once per
+    // room that happened to change within it.
+    if (updates.length > 0) {
+      this.store.setState((s) => updates.reduce((next, update) => applyRoomUpdate(next, update), s));
+    }
+
+    if (!initial) {
+      for (const update of updates) {
+        const messages = update.timeline.filter((e): e is MessageEvent => !isRelation(e));
+        if (messages.length > 0)
+          for (const listener of [...this.listeners]) listener(update.roomId, messages);
       }
     }
   }

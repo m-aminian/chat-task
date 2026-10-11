@@ -13,15 +13,9 @@ export interface Client {
 }
 
 const ClientContext = createContext<Client | null>(null);
-const StateContext = createContext<AppState | null>(null);
 
 export function ClientProvider({ client, children }: { client: Client; children: ReactNode }) {
-  const state = useSyncExternalStore(client.store.subscribe, client.store.getState);
-  return (
-    <ClientContext.Provider value={client}>
-      <StateContext.Provider value={state}>{children}</StateContext.Provider>
-    </ClientContext.Provider>
-  );
+  return <ClientContext.Provider value={client}>{children}</ClientContext.Provider>;
 }
 
 export function useClient(): Client {
@@ -34,10 +28,15 @@ export function useSelector<T>(
   selector: (state: AppState) => T,
   isEqual: (a: T, b: T) => boolean = Object.is,
 ): T {
-  const state = useContext(StateContext);
-  if (!state) throw new Error("useSelector must be used inside <ClientProvider>");
-  const value = selector(state);
-  const previous = useRef(value);
-  if (!isEqual(previous.current, value)) previous.current = value;
-  return previous.current;
+  const { store } = useClient();
+  const cached = useRef<{ value: T } | null>(null);
+
+  const getSnapshot = () => {
+    const next = selector(store.getState());
+    if (cached.current && isEqual(cached.current.value, next)) return cached.current.value;
+    cached.current = { value: next };
+    return next;
+  };
+
+  return useSyncExternalStore(store.subscribe, getSnapshot);
 }

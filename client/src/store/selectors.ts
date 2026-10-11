@@ -7,7 +7,7 @@ const NO_USERS: readonly UserId[] = [];
 
 export function selectRoomOrder(state: AppState): RoomId[] {
   const { roomIds, rooms } = state;
-  return roomIds.sort((a, b) => (rooms[b]?.lastActivity ?? 0) - (rooms[a]?.lastActivity ?? 0));
+  return [...roomIds].sort((a, b) => (rooms[b]?.lastActivity ?? 0) - (rooms[a]?.lastActivity ?? 0));
 }
 
 export const selectRoom =
