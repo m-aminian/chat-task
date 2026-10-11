@@ -1,6 +1,7 @@
 import type { RoomId } from "../matrix/ids";
 import type { TimelineRow } from "../store/selectors";
 import { DaySeparator } from "./DaySeparator";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { EventTile } from "./EventTile";
 
 interface Props {
@@ -9,14 +10,18 @@ interface Props {
   highlighted: boolean;
 }
 
+const TILE_FALLBACK = <p className="body body--unsupported">This message couldn't be displayed.</p>;
+
 export function TimelineEntry({ roomId, row, highlighted }: Props) {
   if (row.type === "day") return <DaySeparator label={row.label} />;
   return (
-    <EventTile
-      roomId={roomId}
-      eventId={row.eventId}
-      continuation={row.continuation}
-      highlighted={highlighted}
-    />
+    <ErrorBoundary fallback={TILE_FALLBACK}>
+      <EventTile
+        roomId={roomId}
+        eventId={row.eventId}
+        continuation={row.continuation}
+        highlighted={highlighted}
+      />
+    </ErrorBoundary>
   );
 }

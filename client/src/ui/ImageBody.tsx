@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ImageInfo } from "../matrix/events";
-import { mediaUrl } from "../matrix/media";
+import { isValidMxcUri, mediaUrl } from "../matrix/media";
 import { loadMedia, rememberSize, resolveMedia } from "../media/mediaCache";
 import { useSetting } from "../settings/settings";
 import { formatBytes } from "../utils/format";
@@ -20,12 +20,13 @@ export function ImageBody({ body, url, info }: Props) {
   const { session } = useSession();
   const showImages = useSetting("showImages");
   const [revealed, setRevealed] = useState(false);
-  const media = resolveMedia(url);
+  const validUrl = isValidMxcUri(url);
+  const media = resolveMedia(validUrl ? url : "");
   const [src, setSrc] = useState(media.src);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
 
   useEffect(() => {
-    if (src) return;
+    if (!validUrl || src) return;
     let active = true;
     loadMedia(session, url)
       .then((entry) => {
@@ -35,7 +36,11 @@ export function ImageBody({ body, url, info }: Props) {
     return () => {
       active = false;
     };
-  }, [session, url, src]);
+  }, [session, url, src, validUrl]);
+
+  if (!validUrl) {
+    return <p className="body body--unsupported">Image unavailable: {body}</p>;
+  }
 
   const w = info.w ?? natural?.w ?? media.width ?? FALLBACK_RATIO.w;
   const h = info.h ?? natural?.h ?? media.height ?? FALLBACK_RATIO.h;

@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { EventId, TxnId, UserId } from "./ids";
 
 export interface EventBase {
@@ -87,22 +88,47 @@ export function parseEvent(raw: any): MatrixEvent | null {
   }
 }
 
+const textContentSchema = z.object({ body: z.string() });
+const imageEssentialsSchema = z.object({ body: z.string(), url: z.string() });
+const imageInfoSchema = z.object({
+  mimetype: z.string().optional(),
+  size: z.number().optional(),
+  w: z.number().optional(),
+  h: z.number().optional(),
+});
+
 function parseMessage(base: EventBase, content: any): MatrixEvent | null {
   const relatesTo = content["m.relates_to"];
   if (relatesTo?.rel_type === "m.replace") {
-    if (!content["m.new_content"]) return null;
-    return { ...base, kind: "edit", targetId: relatesTo.event_id, body: content["m.new_content"].body };
+    const newBody = content["m.new_content"]?.body;
+    if (typeof newBody !== "string") return null;
+    return { ...base, kind: "edit", targetId: relatesTo.event_id, body: newBody };
   }
   switch (content.msgtype) {
-    case "m.image":
-      return { ...base, kind: "image", body: content.body, url: content.url, info: content.info ?? {} };
-    case "m.notice":
-      return { ...base, kind: "notice", body: content.body };
+    case "m.image": {
+      const essentials = imageEssentialsSchema.safeParse(content);
+      if (!essentials.success) return { ...base, kind: "unknown", type: "m.room.message", reason: "invalid" };
+      const info = imageInfoSchema.safeParse(content.info);
+      return {
+        ...base,
+        kind: "image",
+        body: essentials.data.body,
+        url: essentials.data.url,
+        info: info.success ? info.data : {},
+      };
+    }
+    case "m.notice": {
+      const parsed = textContentSchema.safeParse(content);
+      if (!parsed.success) return { ...base, kind: "unknown", type: "m.room.message", reason: "invalid" };
+      return { ...base, kind: "notice", body: parsed.data.body };
+    }
     case "m.text":
     case "m.emote": {
+      const parsed = textContentSchema.safeParse(content);
+      if (!parsed.success) return { ...base, kind: "unknown", type: "m.room.message", reason: "invalid" };
       const replyTo = relatesTo?.["m.in_reply_to"]?.event_id;
-      if (replyTo) return { ...base, kind: "reply", body: content.body, inReplyTo: replyTo };
-      return { ...base, kind: "text", body: content.body, emote: content.msgtype === "m.emote" };
+      if (typeof replyTo === "string") return { ...base, kind: "reply", body: parsed.data.body, inReplyTo: replyTo };
+      return { ...base, kind: "text", body: parsed.data.body, emote: content.msgtype === "m.emote" };
     }
     default:
       return { ...base, kind: "unknown", type: "m.room.message", reason: "unsupported" };
