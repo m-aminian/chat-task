@@ -131,6 +131,7 @@ export function mergeEvents(
   if (events.length === 0) return tl;
   const draft = new Draft(tl);
   const added: EventId[] = [];
+  const addedIds = new Set<EventId>();
   const relations: RelationEvent[] = [];
 
   for (const event of events) {
@@ -140,7 +141,7 @@ export function mergeEvents(
     }
 
     if (event.kind === "redacted" && event.type !== "m.room.message") continue;
-    if (draft.item(event.eventId) || added.includes(event.eventId)) continue;
+    if (draft.item(event.eventId) || addedIds.has(event.eventId)) continue;
 
     const echoId =
       draft.next.pending.find((id) => {
@@ -161,6 +162,7 @@ export function mergeEvents(
       redacted: event.kind === "redacted" || draft.next.redacted[event.eventId] === true,
     });
     added.push(event.eventId);
+    addedIds.add(event.eventId);
   }
 
   if (added.length > 0) {

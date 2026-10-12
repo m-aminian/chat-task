@@ -445,8 +445,19 @@ textarea {
 }
 
 .timeline__header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   display: grid;
   place-items: center;
+}
+
+.timeline__row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
 }
 
 .day-separator {

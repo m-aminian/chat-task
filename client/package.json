@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.14.17",
     "dompurify": "^3.2.0",
     "highlight.js": "^11.11.0",
     "marked": "^15.0.0",

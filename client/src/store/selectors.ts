@@ -28,12 +28,15 @@ export type TimelineRow =
   | { type: "event"; key: string; eventId: EventId; continuation: boolean };
 
 const GROUP_WINDOW_MS = 5 * 60_000;
-const rowCache = new WeakMap<RoomTimeline, TimelineRow[]>();
+// Keyed by `order`, not the whole timeline: reactions/edits/redactions create a
+// fresh timeline object but never touch order or pending, so this correctly hits
+// for the common case of someone reacting to an existing message.
+const rowCache = new WeakMap<EventId[], { pending: EventId[]; rows: TimelineRow[] }>();
 
 export function selectRows(timeline: RoomTimeline | undefined): TimelineRow[] {
   if (!timeline) return [];
-  const cached = rowCache.get(timeline);
-  if (cached) return cached;
+  const cached = rowCache.get(timeline.order);
+  if (cached && cached.pending === timeline.pending) return cached.rows;
 
   const rows: TimelineRow[] = [];
   let lastDay = "";
@@ -50,11 +53,11 @@ export function selectRows(timeline: RoomTimeline | undefined): TimelineRow[] {
       lastSender = null;
     }
     const continuation = sender === lastSender && ts - lastTs < GROUP_WINDOW_MS;
-    rows.push({ type: "event", key: String(rows.length), eventId: id, continuation });
+    rows.push({ type: "event", key: id, eventId: id, continuation });
     lastSender = sender;
     lastTs = ts;
   }
-  rowCache.set(timeline, rows);
+  rowCache.set(timeline.order, { pending: timeline.pending, rows });
   return rows;
 }
 
